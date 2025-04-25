@@ -1,0 +1,32 @@
+[gd_scene load_steps=6 format=3 uid="uid://qicb7cnisedx"]
+
+[ext_resource type="Shader" uid="uid://iljkvqy5hyt3" path="res://agx.gdshader" id="1_ig7tw"]
+[ext_resource type="Texture2D" uid="uid://bmfbaxtutgcp0" path="res://exr/syntheticChart_rec709.01.exr" id="2_0xm2m"]
+
+[sub_resource type="Environment" id="Environment_ig7tw"]
+tonemap_white = 16.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_7dm0k"]
+size = Vector2(16, 9)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ig7tw"]
+render_priority = 0
+shader = ExtResource("1_ig7tw")
+shader_parameter/image = ExtResource("2_0xm2m")
+shader_parameter/exposure = 1.0
+shader_parameter/curve = 1
+shader_parameter/white_in = 16.2917
+shader_parameter/maxVal_in = 1.0
+shader_parameter/lottes_contrast = 1.3699
+shader_parameter/lottes_shoulder = 0.903917
+shader_parameter/contrast = 1.25653
+shader_parameter/shoulder = 1.0
+
+[node name="Node2D" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_ig7tw")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_7dm0k")
+surface_material_override/0 = SubResource("ShaderMaterial_ig7tw")
