@@ -3,13 +3,70 @@ render_mode unshaded;
 
 uniform sampler2D image : source_color, repeat_disable;
 uniform float exposure: hint_range(0.5, 5.0, 0.1) = 1.0;
-uniform int curve: hint_enum("Blender AgX", "Fitted Timothy Lottes", "allenwp-piecewise", "allenwp-piecewise-power", "allenwp-piecewise-power-alt");
-uniform float white_in: hint_range(2.0, 40.0, 0.1) = 16.2917402385381;
-uniform float maxVal_in: hint_range(1.0, 20.0, 0.1) = 1.0;
+uniform int curve: hint_enum("Blender AgX", "Fitted Timothy Lottes", "allenwp-piecewise");
+uniform float white_val: hint_range(2.0, 40.0, 0.1) = 16.2917402385381;
+uniform float max_out: hint_range(1.0, 20.0, 0.1) = 1.0;
 uniform float lottes_contrast: hint_range(0.5, 3.0, 0.01) = 1.36989969378897;
 uniform float lottes_shoulder: hint_range(0.6, 1.0, 0.01) = 0.903916850555009;
 uniform float contrast: hint_range(1.0, 2.0, 0.01) = 1.25652780401491;
 uniform float shoulder: hint_range(0.5, 1.0, 0.01) = 0.867980409496234; // Shoulder of 1.0 is just plain and simple Reinhard
+uniform bool new_matrices = true;
+
+const mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(
+		vec3(0.62751148770907403411, 0.069107555861366290094, 0.016396571916060692158),
+		vec3(0.32927727964735428428, 0.91950325371517433606, 0.088024234821922748922),
+		vec3(0.04330296975639152724, 0.011359406931309376229, 0.89551332165316518758));
+		
+const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
+		vec3(1.6602062978811019111, -0.12455265278490989962, -0.018154995139836493422),
+		vec3(-0.58755383980194848639, 1.1329456581856140455, -0.10060465175595819539),
+		vec3(-0.07282705725221054784, -0.008348386143453457498, 1.1188320152896576747));
+
+
+
+
+// Constructs a scaling matrix with a given origin
+mat4 scalingMatrix(vec3 scaleFactors, vec3 origin) {
+    vec3 offset = origin - origin * scaleFactors;
+
+    return mat4(
+        vec4(scaleFactors.x, 0.0,           0.0,           0.0),
+        vec4(0.0,           scaleFactors.y, 0.0,           0.0),
+        vec4(0.0,           0.0,           scaleFactors.z, 0.0),
+        vec4(offset.x,      offset.y,      offset.z,      1.0)
+    );
+}
+
+// Apply it to a point
+vec2 scale(vec2 pos, vec2 scaleFactors, vec2 origin) {
+	vec3 pos3 = vec3(pos, 0);
+	vec3 scaleFactors3 = vec3(scaleFactors, 1);
+	vec3 origin3 = vec3(origin, 0);
+    mat4 m = scalingMatrix(scaleFactors3, origin3);
+    return (m * vec4(pos3, 1.0)).xy;
+}
+
+// Rotates a 2D point 'pos' around 'origin' by 'angle' (in degrees)
+vec2 rotate(vec2 pos, float angle, vec2 origin) {
+	angle = angle * 3.1415926535897932384626433 / 180.0; // convert from degrees
+    float c = cos(angle);
+    float s = sin(angle);
+
+    // Compute offset terms based on origin
+    float xoff = origin.x - origin.x * c + origin.y * s;
+    float yoff = origin.y - origin.x * s - origin.y * c;
+
+    // Apply rotation matrix with translation offset
+    return vec2(
+        pos.x * c - pos.y * s + xoff,
+        pos.x * s + pos.y * c + yoff
+    );
+}
+
+
+
+
+
 
 vec3 exponential(vec3 x_in, float power) {
 	return x_in / pow(1.0 + pow(x_in, vec3(power)), vec3(1.0 / power));
@@ -51,6 +108,10 @@ vec3 log_encoding_Log2(vec3 lin, float middle_grey, float min_exposure, float ma
 	return log_norm; // Might be negative, but negatives are clipped later.
 }
 
+
+
+
+
 // This is a simplified glsl implementation of EaryChow's AgX that is used by Blender.
 // Input: unbounded linear Rec. 709
 // Output: unbounded linear Rec.709 (Most any value you care about will be within [0.0, 1.0], thus safe to clip.)
@@ -66,20 +127,26 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	color = exposure * color;
 	const float midIn = 0.18;
 	const float midOut = 0.18;
-    float maxVal = max(maxVal_in, 1.0);
-    float white = max(white_in, maxVal);
-	
-	// Combined linear sRGB to linear Rec 2020 and Blender AgX inset matrices:
-	const mat3 srgb_to_rec2020_agx_inset_matrix = mat3(
-			vec3(0.54490813676363087053, 0.14044005884001287035, 0.088827411851915368603),
-			vec3(0.37377945959812267119, 0.75410959864013760045, 0.17887712465043811023),
-			vec3(0.081384976686407536266, 0.10543358536857773485, 0.73224999956948382528));
-
-	// Combined inverse AgX outset matrix and linear Rec 2020 to linear sRGB matrices.
-	const mat3 agx_outset_rec2020_to_srgb_matrix = mat3(
-			vec3(1.9645509602733325934, -0.29932243390911083839, -0.16436833806080403409),
-			vec3(-0.85585845117807513559, 1.3264510741502356555, -0.23822464068860595117),
-			vec3(-0.10886710826831608324, -0.027084020983874825605, 1.402665347143271889));
+    float maxVal = max(max_out, 1.0);
+    float white = max(white_val, maxVal);
+			
+	const mat3 agx_inset_matrix = mat3(
+			vec3(0.856627153315983, 0.137318972929847, 0.11189821299995),
+			vec3(0.0951212405381588, 0.761241990602591, 0.0767994186031903),
+			vec3(0.0482516061458583, 0.101439036467562, 0.811302368396859));
+	const mat3 agx_inset_matrix_new = mat3(
+			vec3(0.856627156288779, 0.137318972283552, 0.11189820804518),
+			vec3(0.0951212454025349, 0.761241987009081, 0.0767994145625176),
+			vec3(0.0482515983086858, 0.101439040707367, 0.811302377392303));
+			
+	const mat3 agx_outset_matrix = mat3(
+			vec3(0.89979695591161, 0.11142098895748, 0.11142098895748),
+			vec3(0.0871996192028351, 0.875575586156966, 0.0871996192028349),
+			vec3(0.0130034248855548, 0.0130034248855548, 0.801379391839685));
+	const mat3 agx_outset_matrix_new = mat3(
+			vec3(0.899796963837832, 0.11142098366896, 0.11142098366896),
+			vec3(0.0871996171023204, 0.875575597271192, 0.0871996171023203),
+			vec3(0.0130034190598471, 0.0130034190598472, 0.801379399228719));
 
 	const float midgrey = 0.18;
 	const float normalized_log2_minimum = -10.0;
@@ -96,8 +163,14 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	color = max(color, 0);
 
 	// Apply inset matrix.
-	color = srgb_to_rec2020_agx_inset_matrix * color;
-
+	color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;
+	if (new_matrices) {
+		color = agx_inset_matrix_new * color;
+	}
+	else {
+		color = agx_inset_matrix * color;
+	}
+	
 	
 	// Apply Log2 curve to prepare for sigmoid.
 	vec3 blender = log_encoding_Log2(color, midgrey, normalized_log2_minimum, normalized_log2_maximum);
@@ -122,9 +195,7 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	} else if (curve == 1) {
 		color = timLottes;
 	} else if (curve == 2) {
-		
 		// CPU side calculations:
-
         float toe_a = -1.0 * ((pow(midIn, contrast) * (midOut - 1.0)) / midOut); // Can be simplified when midIn == midOut == 0.18: (41.0 / 9.0) * pow(0.18, contrast)
         // Slope formula is simply the derivative of the toe function with an input of midOut
         float slope_a = pow(midIn, contrast) + toe_a;
@@ -148,67 +219,21 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 		
 		color = mix(s, t, lessThan(color, vec3(0.18)));
 	}
-	else if (curve == 3) {
-        float toe_a = -1.0 * ((pow(midIn, contrast) * (midOut - 1.0)) / midOut); // Can be simplified when midIn == midOut == 0.18: (41.0 / 9.0) * pow(0.18, contrast)
-        // Slope formula is simply the derivative of the toe function with an input of midOut
-        float slope_a = pow(midIn, contrast) + toe_a;
-        float slope = (contrast * pow(midIn, contrast - 1.0) * toe_a) / (slope_a * slope_a);
-
-        float c = log((maxVal + midOut * (-1. + shoulder) - maxVal * shoulder + shoulder * slope * (-midIn + white)) / slope) / log(-midIn + white);;
-
-        float shoulderMaxVal = maxVal - midOut;
-		float w = white - midIn;
-        w = w * w;
-        w = w / shoulderMaxVal;
-        w = w * slope;
-
-		vec3 s = color;
-        // GPU side calculations:
-        // Shoulder
-        s -= midIn;
-        s = slope * s * (shoulder + s / w) / (shoulder + (pow(s, vec3(c)) * slope) / shoulderMaxVal);
-        s += midOut;
-		
-        // Toe
-        vec3 t = pow(color, vec3(contrast));
-        t = t / (t + vec3(toe_a));
-		
-		color = mix(s, t, lessThan(color, vec3(0.18)));
-	}
-	else if (curve == 4) {
-        float toe_a = -1.0 * ((pow(midIn, contrast) * (midOut - 1.0)) / midOut); // Can be simplified when midIn == midOut == 0.18: (41.0 / 9.0) * pow(0.18, contrast)
-        // Slope formula is simply the derivative of the toe function with an input of midOut
-        float slope_a = pow(midIn, contrast) + toe_a;
-        float slope = (contrast * pow(midIn, contrast - 1.0) * toe_a) / (slope_a * slope_a);
-
-        float c = (-1.0 * maxVal + midOut + slope * pow(-1.0 * midIn + white, shoulder)) / (-1.0 * maxVal + midOut + slope * (-1.0 * midIn + white));
-
-        float shoulderMaxVal = maxVal - midOut;
-		float w = white - midIn;
-        w = w * w;
-        w = w / shoulderMaxVal;
-        w = w * slope;
-
-		vec3 s = color;
-        // GPU side calculations:
-        // Shoulder
-        s -= midIn;
-        s = slope * s * (c + s / w) / (c + (pow(s, vec3(shoulder)) * slope) / shoulderMaxVal);
-        s += midOut;
-		
-        // Toe
-        vec3 t = pow(color, vec3(contrast));
-        t = t / (t + vec3(toe_a));
-		
-		color = mix(s, t, lessThan(color, vec3(0.18)));
-	}
 
 	// Apply outset to make the result more chroma-laden and then go back to linear sRGB.
-	color = agx_outset_rec2020_to_srgb_matrix * color;
+	
+	if (new_matrices) {
+		color = inverse(agx_outset_matrix_new) * color;
+	}
+	else {
+		color = inverse(agx_outset_matrix) * color;
+	}
+	color = LINEAR_REC2020_TO_LINEAR_SRGB * color;
 
 	// Blender's lusRGB.compensate_low_side is too complex for this shader, so
 	// simply return the color, even if it has negative components. These negative
 	// components may be useful for subsequent color adjustments.
+	return color;
 	return color / maxVal;
 }
 

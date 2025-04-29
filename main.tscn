@@ -14,13 +14,14 @@ render_priority = 0
 shader = ExtResource("1_ig7tw")
 shader_parameter/image = ExtResource("2_0xm2m")
 shader_parameter/exposure = 1.0
-shader_parameter/curve = 1
-shader_parameter/white_in = 16.2917
-shader_parameter/maxVal_in = 1.0
+shader_parameter/curve = 0
+shader_parameter/white_val = 16.2917
+shader_parameter/max_out = 1.0
 shader_parameter/lottes_contrast = 1.3699
 shader_parameter/lottes_shoulder = 0.903917
 shader_parameter/contrast = 1.25653
 shader_parameter/shoulder = 1.0
+shader_parameter/new_matrices = true
 
 [node name="Node2D" type="Node3D"]
 

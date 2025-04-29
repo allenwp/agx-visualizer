@@ -1,0 +1,55 @@
+Piecewise power function that is unstable:
+	
+		float toe_a = -1.0 * ((pow(midIn, contrast) * (midOut - 1.0)) / midOut); // Can be simplified when midIn == midOut == 0.18: (41.0 / 9.0) * pow(0.18, contrast)
+		// Slope formula is simply the derivative of the toe function with an input of midOut
+		float slope_a = pow(midIn, contrast) + toe_a;
+		float slope = (contrast * pow(midIn, contrast - 1.0) * toe_a) / (slope_a * slope_a);
+
+		float c = log((maxVal + midOut * (-1. + shoulder) - maxVal * shoulder + shoulder * slope * (-midIn + white)) / slope) / log(-midIn + white);
+
+		float shoulderMaxVal = maxVal - midOut;
+		float w = white - midIn;
+		w = w * w;
+		w = w / shoulderMaxVal;
+		w = w * slope;
+
+		vec3 s = color;
+		// GPU side calculations:
+		// Shoulder
+		s -= midIn;
+		s = slope * s * (shoulder + s / w) / (shoulder + (pow(s, vec3(c)) * slope) / shoulderMaxVal);
+		s += midOut;
+		
+		// Toe
+		vec3 t = pow(color, vec3(contrast));
+		t = t / (t + vec3(toe_a));
+		
+		color = mix(s, t, lessThan(color, vec3(0.18)));
+
+Alternative version:
+	
+		float toe_a = -1.0 * ((pow(midIn, contrast) * (midOut - 1.0)) / midOut); // Can be simplified when midIn == midOut == 0.18: (41.0 / 9.0) * pow(0.18, contrast)
+		// Slope formula is simply the derivative of the toe function with an input of midOut
+		float slope_a = pow(midIn, contrast) + toe_a;
+		float slope = (contrast * pow(midIn, contrast - 1.0) * toe_a) / (slope_a * slope_a);
+
+		float c = (-1.0 * maxVal + midOut + slope * pow(-1.0 * midIn + white, shoulder)) / (-1.0 * maxVal + midOut + slope * (-1.0 * midIn + white));
+
+		float shoulderMaxVal = maxVal - midOut;
+		float w = white - midIn;
+		w = w * w;
+		w = w / shoulderMaxVal;
+		w = w * slope;
+
+		vec3 s = color;
+		// GPU side calculations:
+		// Shoulder
+		s -= midIn;
+		s = slope * s * (c + s / w) / (c + (pow(s, vec3(shoulder)) * slope) / shoulderMaxVal);
+		s += midOut;
+		
+		// Toe
+		vec3 t = pow(color, vec3(contrast));
+		t = t / (t + vec3(toe_a));
+		
+		color = mix(s, t, lessThan(color, vec3(0.18)));
