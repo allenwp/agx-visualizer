@@ -1,6 +1,9 @@
 shader_type spatial;
 render_mode unshaded;
 
+uniform float log2_min = -18.0;
+uniform float log2_max = 18.0;
+uniform bool use_image = true;
 uniform sampler2D image : source_color, repeat_disable;
 uniform float exposure: hint_range(0.5, 5.0, 0.1) = 1.0;
 uniform int curve: hint_enum("Blender AgX", "Fitted Timothy Lottes", "allenwp-piecewise");
@@ -287,7 +290,68 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 }
 
 void fragment() {
-	vec3 color = texture(image, UV).rgb;
+	vec3 color;
+	if (use_image) {
+		color = texture(image, UV).rgb;
+	} else {
+		float top_bar = 0.01;
+		if (UV.y >= top_bar)
+		{
+			float padding = 0.005;
+			float y = (UV.y - top_bar - padding) / (1.0 - top_bar - padding * 2.0);
+			y = clamp(y, 0.0, 1.0);
+			float segments = 1.0 / 6.0;
+			vec3 col = vec3(0);
+			if (y < segments)
+			{
+				col.r = 1.0;
+				col.g = y / segments;
+				col.b = 0.0;
+			}
+			else if (y < segments * 2.0)
+			{
+				col.r = (y - segments * 2.0) / -segments;
+				col.g = 1.0;
+				col.b = 0.0;
+			}
+			else if (y < segments * 3.0)
+			{
+				col.r = 0.0;
+				col.g = 1.0;
+				col.b = (y - segments * 2.0) / segments;
+			}
+			else if (y < segments * 4.0)
+			{
+				col.r = 0.0;
+				col.g = (y - segments * 4.0) / -segments;
+				col.b = 1.0;
+			}
+			else if (y < segments * 5.0)
+			{
+				col.r = (y - segments * 4.0) / segments;
+				col.g = 0.0;
+				col.b = 1.0;
+			}
+			else
+			{
+				col.r = 1.0;
+				col.g = 0.0;
+				col.b = (y - segments * 6.0) / -segments;
+			}
+			
+			float log2_value = UV.x * (log2_max - log2_min) - abs(log2_min);
+			float scale = pow(2.0, log2_value);
+
+			color = col * scale;
+		}
+		else
+		{
+			float log2_value = UV.x * (log2_max - log2_min) - abs(log2_min);
+			float scale = pow(2.0, log2_value);
+
+			color = vec3(1.0) * scale;
+		}
+	}
 	
 	color = tonemap_agx(color, 6.5);
 	
