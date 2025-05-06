@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode unshaded;
 
+#include "agx_lib.gdshaderinc"
+
 uniform float log2_min = -18.0;
 uniform float log2_max = 18.0;
 uniform bool use_image = true;
@@ -25,96 +27,90 @@ const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
 		vec3(-0.58755383980194848639, 1.1329456581856140455, -0.10060465175595819539),
 		vec3(-0.07282705725221054784, -0.008348386143453457498, 1.1188320152896576747));
 
+//// Constructs a scaling matrix with a given origin
+//mat4 scalingMatrix(vec3 scaleFactors, vec3 origin) {
+    //vec3 offset = origin - origin * scaleFactors;
+//
+    //return mat4(
+        //vec4(scaleFactors.x, 0.0,           0.0,           0.0),
+        //vec4(0.0,           scaleFactors.y, 0.0,           0.0),
+        //vec4(0.0,           0.0,           scaleFactors.z, 0.0),
+        //vec4(offset.x,      offset.y,      offset.z,      1.0)
+    //);
+//}
+//
+//// Apply it to a point
+//vec2 scale(vec2 pos, vec2 scaleFactors, vec2 origin) {
+	//vec3 pos3 = vec3(pos, 0);
+	//vec3 scaleFactors3 = vec3(scaleFactors, 1);
+	//vec3 origin3 = vec3(origin, 0);
+    //mat4 m = scalingMatrix(scaleFactors3, origin3);
+    //return (m * vec4(pos3, 1.0)).xy;
+//}
+//
+//// Rotates a 2D point 'pos' around 'origin' by 'angle' (in degrees)
+//vec2 rotate(vec2 pos, float angle, vec2 origin) {
+	//angle = angle * 3.1415926535897932384626433 / 180.0; // convert from degrees
+    //float c = cos(angle);
+    //float s = sin(angle);
+//
+    //// Compute offset terms based on origin
+    //float xoff = origin.x - origin.x * c + origin.y * s;
+    //float yoff = origin.y - origin.x * s - origin.y * c;
+//
+    //// Apply rotation matrix with translation offset
+    //return vec2(
+        //pos.x * c - pos.y * s + xoff,
+        //pos.x * s + pos.y * c + yoff
+    //);
+//}
+//
+//// Computes the RGB to XYZ transformation matrix
+//mat3 RGBtoXYZ(Chromaticities N) {
+    //// Compute the XYZ coordinates of the primaries
+    //vec3 X = vec3(N.red.x / N.red.y, N.green.x / N.green.y, N.blue.x / N.blue.y);
+    //vec3 Y = vec3(1.0, 1.0, 1.0);
+    //vec3 Z = vec3(
+        //(1.0 - N.red.x - N.red.y) / N.red.y,
+        //(1.0 - N.green.x - N.green.y) / N.green.y,
+        //(1.0 - N.blue.x - N.blue.y) / N.blue.y
+    //);
+//
+    //// Assemble the matrix from the primaries
+   	//mat3 M = mat3(X, Y, Z);
+//
+    //// Compute the XYZ coordinates of the white point
+    //vec3 white = vec3(
+        //N.white.x / N.white.y,
+        //1.0,
+        //(1.0 - N.white.x - N.white.y) / N.white.y
+    //);
+//
+    //// Compute the scaling factors
+    //vec3 S = inverse(M) * white;
+//
+    //// Scale columns of M
+    //M[0] *= S.x;
+    //M[1] *= S.y;
+    //M[2] *= S.z;
+//
+    //return M;
+//}
+//
+//mat3 XYZtoRGB(Chromaticities N) {
+	//return inverse(RGBtoXYZ(N));
+//}
+//
+//mat3 RGBtoRGB(Chromaticities N,Chromaticities M) {
+  //mat3 In2XYZ = RGBtoXYZ(N);
+  //mat3 XYZ2Out = XYZtoRGB(M);
+//
+  //mat3 rgbtorgb = In2XYZ * XYZ2Out;
+//
+  //return rgbtorgb;
+//}
 
-struct Chromaticities {
-    vec2 red;
-    vec2 green;
-    vec2 blue;
-    vec2 white;
-};
 
-// Constructs a scaling matrix with a given origin
-mat4 scalingMatrix(vec3 scaleFactors, vec3 origin) {
-    vec3 offset = origin - origin * scaleFactors;
-
-    return mat4(
-        vec4(scaleFactors.x, 0.0,           0.0,           0.0),
-        vec4(0.0,           scaleFactors.y, 0.0,           0.0),
-        vec4(0.0,           0.0,           scaleFactors.z, 0.0),
-        vec4(offset.x,      offset.y,      offset.z,      1.0)
-    );
-}
-
-// Apply it to a point
-vec2 scale(vec2 pos, vec2 scaleFactors, vec2 origin) {
-	vec3 pos3 = vec3(pos, 0);
-	vec3 scaleFactors3 = vec3(scaleFactors, 1);
-	vec3 origin3 = vec3(origin, 0);
-    mat4 m = scalingMatrix(scaleFactors3, origin3);
-    return (m * vec4(pos3, 1.0)).xy;
-}
-
-// Rotates a 2D point 'pos' around 'origin' by 'angle' (in degrees)
-vec2 rotate(vec2 pos, float angle, vec2 origin) {
-	angle = angle * 3.1415926535897932384626433 / 180.0; // convert from degrees
-    float c = cos(angle);
-    float s = sin(angle);
-
-    // Compute offset terms based on origin
-    float xoff = origin.x - origin.x * c + origin.y * s;
-    float yoff = origin.y - origin.x * s - origin.y * c;
-
-    // Apply rotation matrix with translation offset
-    return vec2(
-        pos.x * c - pos.y * s + xoff,
-        pos.x * s + pos.y * c + yoff
-    );
-}
-
-// Computes the RGB to XYZ transformation matrix
-mat3 RGBtoXYZ(Chromaticities N) {
-    // Compute the XYZ coordinates of the primaries
-    vec3 X = vec3(N.red.x / N.red.y, N.green.x / N.green.y, N.blue.x / N.blue.y);
-    vec3 Y = vec3(1.0, 1.0, 1.0);
-    vec3 Z = vec3(
-        (1.0 - N.red.x - N.red.y) / N.red.y,
-        (1.0 - N.green.x - N.green.y) / N.green.y,
-        (1.0 - N.blue.x - N.blue.y) / N.blue.y
-    );
-
-    // Assemble the matrix from the primaries
-   	mat3 M = mat3(X, Y, Z);
-
-    // Compute the XYZ coordinates of the white point
-    vec3 white = vec3(
-        N.white.x / N.white.y,
-        1.0,
-        (1.0 - N.white.x - N.white.y) / N.white.y
-    );
-
-    // Compute the scaling factors
-    vec3 S = inverse(M) * white;
-
-    // Scale columns of M
-    M[0] *= S.x;
-    M[1] *= S.y;
-    M[2] *= S.z;
-
-    return M;
-}
-
-mat3 XYZtoRGB(Chromaticities N) {
-	return inverse(RGBtoXYZ(N));
-}
-
-mat3 RGBtoRGB(Chromaticities N,Chromaticities M){
-  mat3 In2XYZ = RGBtoXYZ(N);
-  mat3 XYZ2Out = XYZtoRGB(M);
-
-  mat3 rgbtorgb = In2XYZ * XYZ2Out;
-
-  return rgbtorgb;
-}
 
 
 
