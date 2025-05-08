@@ -12,8 +12,8 @@ size = Vector2(16, 9)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ig7tw"]
 render_priority = 0
 shader = ExtResource("1_ig7tw")
-shader_parameter/log2_min = -12.765
-shader_parameter/log2_max = 70.53
+shader_parameter/log2_min = -6.725
+shader_parameter/log2_max = 7.91
 shader_parameter/use_image = false
 shader_parameter/image = ExtResource("2_0xm2m")
 shader_parameter/exposure = 1.0
@@ -24,7 +24,7 @@ shader_parameter/lottes_contrast = 1.3699
 shader_parameter/lottes_shoulder = 0.903917
 shader_parameter/contrast = 1.25653
 shader_parameter/shoulder = 1.0
-shader_parameter/new_matrices = true
+shader_parameter/new_matrices = false
 
 [node name="Node2D" type="Node3D"]
 

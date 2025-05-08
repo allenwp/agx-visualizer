@@ -26,96 +26,7 @@ const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
 		vec3(1.6602062978811019111, -0.12455265278490989962, -0.018154995139836493422),
 		vec3(-0.58755383980194848639, 1.1329456581856140455, -0.10060465175595819539),
 		vec3(-0.07282705725221054784, -0.008348386143453457498, 1.1188320152896576747));
-
-//// Constructs a scaling matrix with a given origin
-//mat4 scalingMatrix(vec3 scaleFactors, vec3 origin) {
-    //vec3 offset = origin - origin * scaleFactors;
-//
-    //return mat4(
-        //vec4(scaleFactors.x, 0.0,           0.0,           0.0),
-        //vec4(0.0,           scaleFactors.y, 0.0,           0.0),
-        //vec4(0.0,           0.0,           scaleFactors.z, 0.0),
-        //vec4(offset.x,      offset.y,      offset.z,      1.0)
-    //);
-//}
-//
-//// Apply it to a point
-//vec2 scale(vec2 pos, vec2 scaleFactors, vec2 origin) {
-	//vec3 pos3 = vec3(pos, 0);
-	//vec3 scaleFactors3 = vec3(scaleFactors, 1);
-	//vec3 origin3 = vec3(origin, 0);
-    //mat4 m = scalingMatrix(scaleFactors3, origin3);
-    //return (m * vec4(pos3, 1.0)).xy;
-//}
-//
-//// Rotates a 2D point 'pos' around 'origin' by 'angle' (in degrees)
-//vec2 rotate(vec2 pos, float angle, vec2 origin) {
-	//angle = angle * 3.1415926535897932384626433 / 180.0; // convert from degrees
-    //float c = cos(angle);
-    //float s = sin(angle);
-//
-    //// Compute offset terms based on origin
-    //float xoff = origin.x - origin.x * c + origin.y * s;
-    //float yoff = origin.y - origin.x * s - origin.y * c;
-//
-    //// Apply rotation matrix with translation offset
-    //return vec2(
-        //pos.x * c - pos.y * s + xoff,
-        //pos.x * s + pos.y * c + yoff
-    //);
-//}
-//
-//// Computes the RGB to XYZ transformation matrix
-//mat3 RGBtoXYZ(Chromaticities N) {
-    //// Compute the XYZ coordinates of the primaries
-    //vec3 X = vec3(N.red.x / N.red.y, N.green.x / N.green.y, N.blue.x / N.blue.y);
-    //vec3 Y = vec3(1.0, 1.0, 1.0);
-    //vec3 Z = vec3(
-        //(1.0 - N.red.x - N.red.y) / N.red.y,
-        //(1.0 - N.green.x - N.green.y) / N.green.y,
-        //(1.0 - N.blue.x - N.blue.y) / N.blue.y
-    //);
-//
-    //// Assemble the matrix from the primaries
-   	//mat3 M = mat3(X, Y, Z);
-//
-    //// Compute the XYZ coordinates of the white point
-    //vec3 white = vec3(
-        //N.white.x / N.white.y,
-        //1.0,
-        //(1.0 - N.white.x - N.white.y) / N.white.y
-    //);
-//
-    //// Compute the scaling factors
-    //vec3 S = inverse(M) * white;
-//
-    //// Scale columns of M
-    //M[0] *= S.x;
-    //M[1] *= S.y;
-    //M[2] *= S.z;
-//
-    //return M;
-//}
-//
-//mat3 XYZtoRGB(Chromaticities N) {
-	//return inverse(RGBtoXYZ(N));
-//}
-//
-//mat3 RGBtoRGB(Chromaticities N,Chromaticities M) {
-  //mat3 In2XYZ = RGBtoXYZ(N);
-  //mat3 XYZ2Out = XYZtoRGB(M);
-//
-  //mat3 rgbtorgb = In2XYZ * XYZ2Out;
-//
-  //return rgbtorgb;
-//}
-
-
-
-
-
-
-
+		
 vec3 exponential(vec3 x_in, float power) {
 	return x_in / pow(1.0 + pow(x_in, vec3(power)), vec3(1.0 / power));
 }
@@ -157,9 +68,6 @@ vec3 log_encoding_Log2(vec3 lin, float middle_grey, float min_exposure, float ma
 }
 
 
-
-
-
 // This is a simplified glsl implementation of EaryChow's AgX that is used by Blender.
 // Input: unbounded linear Rec. 709
 // Output: unbounded linear Rec.709 (Most any value you care about will be within [0.0, 1.0], thus safe to clip.)
@@ -182,19 +90,24 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 			vec3(0.856627153315983, 0.137318972929847, 0.11189821299995),
 			vec3(0.0951212405381588, 0.761241990602591, 0.0767994186031903),
 			vec3(0.0482516061458583, 0.101439036467562, 0.811302368396859));
-	const mat3 agx_inset_matrix_new = mat3(
-			vec3(0.856627156288779, 0.137318972283552, 0.11189820804518),
-			vec3(0.0951212454025349, 0.761241987009081, 0.0767994145625176),
-			vec3(0.0482515983086858, 0.101439040707367, 0.811302377392303));
+	//const mat3 agx_inset_matrix_new = mat3(
+			//vec3(0.856627156288779, 0.137318972283552, 0.11189820804518),
+			//vec3(0.0951212454025349, 0.761241987009081, 0.0767994145625176),
+			//vec3(0.0482515983086858, 0.101439040707367, 0.811302377392303));
 			
 	const mat3 agx_outset_matrix = mat3(
 			vec3(0.89979695591161, 0.11142098895748, 0.11142098895748),
 			vec3(0.0871996192028351, 0.875575586156966, 0.0871996192028349),
 			vec3(0.0130034248855548, 0.0130034248855548, 0.801379391839685));
-	const mat3 agx_outset_matrix_new = mat3(
-			vec3(0.899796963837832, 0.11142098366896, 0.11142098366896),
-			vec3(0.0871996171023204, 0.875575597271192, 0.0871996171023203),
-			vec3(0.0130034190598471, 0.0130034190598472, 0.801379399228719));
+	//const mat3 agx_outset_matrix_new = mat3(
+			//vec3(0.899796963837832, 0.11142098366896, 0.11142098366896),
+			//vec3(0.0871996171023204, 0.875575597271192, 0.0871996171023203),
+			//vec3(0.0130034190598471, 0.0130034190598472, 0.801379399228719));
+			
+	Chromaticities working = InsetPrimaries(REC2020_PRI, 0.32965205, 0.28051336, 0.12475368, 2.13976149, -1.22827335, -3.05174246);
+	Chromaticities destination = InsetPrimaries(REC2020_PRI, 0.32317438, 0.28325605, 0.0374326, 0.,0.,0.);
+	mat3 agx_inset_matrix_generated = RGBtoRGB(working, REC2020_PRI);
+	mat3 agx_outset_matrix_generated = RGBtoRGB(destination, REC2020_PRI); // EaryChow's configuration reverses source and destination
 
 	const float midgrey = 0.18;
 	const float normalized_log2_minimum = -10.0;
@@ -213,7 +126,7 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	// Apply inset matrix.
 	color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;
 	if (new_matrices) {
-		color = agx_inset_matrix_new * color;
+		color = agx_inset_matrix_generated * color;
 	}
 	else {
 		color = agx_inset_matrix * color;
@@ -271,7 +184,7 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	// Apply outset to make the result more chroma-laden and then go back to linear sRGB.
 	
 	if (new_matrices) {
-		color = inverse(agx_outset_matrix_new) * color;
+		color = inverse(agx_outset_matrix_generated) * color;
 	}
 	else {
 		color = inverse(agx_outset_matrix) * color;

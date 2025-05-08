@@ -1,3 +1,8 @@
+/* ##########################################################################
+    Custom Structs
+    ---------------------------
+*/
+
 struct Chromaticities {
     vec2 red;
     vec2 green;
@@ -5,12 +10,74 @@ struct Chromaticities {
     vec2 white;
 };
 
-Chromaticities make_chromaticities( vec2 A, vec2 B, vec2 C, vec2 D) {
-  Chromaticities F;
-  F.red = A; F.green = B; F.blue = C; F.white = D;
-  return F;
-}
+/* ##########################################################################
+    Color Conversion Matrices
+    ---------------------------
+*/
 
+// Gamut conversion Matrices
+//AP0, AP1 and P3D60 was changed to D65
+#define identity_mtx make_float3x3(make_float3(1.0f, 0.0f, 0.0f), make_float3(0.0f, 1.0f, 0.0f), make_float3(0.0f, 0.0f, 1.0f))
+#define matrix_ap0_to_xyz make_float3x3(make_float3(0.93863095f, -0.00574192f, 0.0175669f), make_float3(0.33809359f,0.7272139f, -0.0653075f), make_float3(0.00072312f, 0.00081844, 1.08751619f))
+#define matrix_ap1_to_xyz make_float3x3(make_float3(0.65241872f, 0.12717993f, 0.17085728f), make_float3(0.26806406f, 0.67246448f, 0.05947146f), make_float3(-0.00546993f,0.0051828f, 1.08934488f))
+#define matrix_p3d65_to_xyz make_float3x3(make_float3(0.486571133137f, 0.265667706728f, 0.198217317462f), make_float3(0.228974640369f, 0.691738605499f, 0.079286918044f), make_float3(-0.000000000000f, 0.045113388449, 1.043944478035f))
+#define matrix_p3d60_to_xyz make_float3x3(make_float3(0.504949748516f, 0.264681518078f, 0.183015048504f), make_float3(0.237623393536f, 0.689170777798f, 0.073206014931f), make_float3(-0.000000000000f, 0.044945921749f, 0.963879227638f))
+#define matrix_p3dci_to_xyz make_float3x3(make_float3(0.445170015097f, 0.277134418488f, 0.172282665968f), make_float3(0.209491759539f, 0.721595287323f, 0.068913064897f), make_float3(-0.000000000000f, 0.047060567886f, 0.907355427742f))
+#define matrix_rec2020_to_xyz make_float3x3(make_float3(0.636958122253f, 0.144616916776f, 0.168880969286f), make_float3(0.262700229883f, 0.677998125553f, 0.059301715344f), make_float3(0.000000000000f, 0.028072696179, 1.060985088348f))
+#define matrix_rec709_to_xyz make_float3x3(make_float3(0.412390917540f, 0.357584357262f, 0.180480793118f), make_float3(0.212639078498f, 0.715168714523f, 0.072192311287f), make_float3(0.019330825657f, 0.119194783270f, 0.950532138348f))
+#define matrix_arriwg_to_xyz make_float3x3(make_float3(0.638007640839f, 0.214703813195f, 0.097744457424f), make_float3(0.291953772306f, 0.823840856552f, -0.115794822574f), make_float3(0.002798279049f, -0.067034222186, 1.153293848038f))
+#define matrix_redwg_to_xyz make_float3x3(make_float3(0.735275208950f, 0.068609409034f, 0.146571278572f), make_float3(0.286694079638f, 0.842979073524f, -0.129673242569f), make_float3(-0.079680845141f, -0.347343206406, 1.516081929207f))
+#define matrix_sonysgamut3 make_float3x3(make_float3(0.599083900452f, 0.248925492167f, 0.102446496487f), make_float3(0.215075820684f, 0.885068416595f, -0.100144319236f), make_float3(-0.032065849751f, -0.027658388019, 1.148782014847f))
+#define matrix_egamut_to_xyz make_float3x3(make_float3(0.705396831036f, 0.164041340351f, 0.081017754972f), make_float3(0.280130714178f, 0.820206701756f, -0.100337378681f), make_float3(-0.103781513870f, -0.072907261550, 1.265746593475f))
+#define matrix_davinciwg_to_xyz make_float3x3(make_float3(0.700622320175f, 0.148774802685f, 0.101058728993f), make_float3(0.274118483067f, 0.873631775379f, -0.147750422359f), make_float3(-0.098962903023f, -0.137895315886, 1.325916051865f))
+#define matrix_blackmagicwg_to_xyz make_float3x3(make_float3(0.606538414955f, 0.220412746072f, 0.123504832387f), make_float3(0.267992943525f, 0.832748472691f, -0.100741356611f), make_float3(-0.029442556202f, -0.086612440646, 1.205112814903f))
+#define matrix_canoncinema_to_xyz make_float3x3(make_float3(0.71604965f, 0.12968348f, 0.1047228f),make_float3(0.26126136f, 0.86964215f, -0.1309035f),make_float3(-0.00967635f, -0.23648164f, 1.33521573f))
+#define matrix_arriwg4_to_xyz make_float3x3(make_float3(0.704858320407232064f,  0.129760295170463003f, 0.115837311473976537f),make_float3(0.254524176404027025f, 0.781477732712002049f, 0.036001909116029039f),make_float3(0.0f, 0.0f, 1.089057750759878429f))
+
+// Color Spaces Coordinates
+//AP0, AP1 and P3D60 was changed to D65
+const Chromaticities AP0 =
+Chromaticities(vec2(0.734771f, 0.264663f), vec2(-0.00795f, 1.006817f), vec2(0.016895f, -0.062809f), vec2(0.3127f, 0.3129f));
+//const Chromaticities AP0 =
+//{ {0.7347f, 0.2653f}, {0.0f, 1.0f}, {0.0001f, -0.077f}, {0.32168f, 0.33767f} };
+const Chromaticities AP1 =
+Chromaticities(vec2(0.713016f, 0.292962f), vec2(0.158021f, 0.835539f), vec2(0.129469f, 0.045065f), vec2(0.3127f, 0.329f) );
+//const Chromaticities AP1 =
+//Chromaticities(vec2(0.713f, 0.293f), vec2(0.165f, 0.83f), vec2(0.128f, 0.044f), vec2(0.32168f, 0.33767f) );
+const Chromaticities REC709_PRI =
+Chromaticities(vec2(0.64f, 0.33f), vec2(0.3f, 0.6f), vec2(0.15f, 0.06f), vec2(0.3127f, 0.329f) );
+const Chromaticities REC709_PRI_2012 =
+Chromaticities(vec2(0.6366613f, 0.33388708f), vec2(0.33235734f, 0.57712478f), vec2( 0.13868026f, 0.1068737f), vec2(0.3127f, 0.329f) );
+const Chromaticities P3D60_PRI =
+Chromaticities(vec2(0.67912f, 0.32026f), vec2(0.25856f, 0.69172f), vec2(0.14946f, 0.05973f), vec2(0.3127, 0.329f) );
+const Chromaticities P3D65_PRI =
+Chromaticities(vec2(0.68f, 0.32f), vec2(0.265f, 0.69f), vec2(0.15f, 0.06f), vec2(0.3127f, 0.329f) );
+const Chromaticities P3DCI_PRI =
+Chromaticities(vec2(0.68f, 0.32f), vec2(0.265f, 0.69f), vec2(0.15f, 0.06f), vec2(0.314f, 0.351f) );
+const Chromaticities ARRI_ALEXA_WG_PRI =
+Chromaticities(vec2(0.684f, 0.313f), vec2(0.221f, 0.848f), vec2(0.0861f, -0.102f), vec2(0.3127f, 0.329f) );
+const Chromaticities REC2020_PRI =
+Chromaticities(vec2(0.708f, 0.292f), vec2(0.17f, 0.797f), vec2(0.131f, 0.046f), vec2(0.3127f, 0.329f) );
+const Chromaticities REC2020_PRI_2012 =
+Chromaticities(vec2(0.69977419f,  0.30022581f), vec2(0.22431866f, 0.76476346f), vec2(0.12136517f, 0.0961114f), vec2(0.3127f, 0.329f) );
+const Chromaticities ARRI_ALEXA_WG4_PRI =
+Chromaticities(vec2(0.7347f,  0.2653f), vec2(0.1424f, 0.8576f), vec2(0.0991f,-0.0308f), vec2(0.3127f, 0.329f) );
+const Chromaticities SGAMUT3cine_PRI =
+Chromaticities(vec2(0.766f,  0.275f), vec2(0.225f, 0.8f), vec2(0.089f, -0.087f), vec2(0.3127f, 0.329f) );
+const Chromaticities SGAMUT3_PRI =
+Chromaticities(vec2(0.73f,  0.28f), vec2(0.14f, 0.855f), vec2(0.01f, -0.05f), vec2(0.3127f, 0.329f) );
+const Chromaticities EGAMUT_PRI =
+Chromaticities(vec2(0.8f,  0.3177f), vec2(0.18f, 0.9f), vec2(0.065f, -0.0805f), vec2(0.3127f, 0.329f) );
+const Chromaticities DWGINT_PRI =
+Chromaticities(vec2(0.8f,  0.3130f), vec2(0.1682f, 0.9877f), vec2(0.079f, -0.1155f), vec2(0.3127f, 0.329f) );
+const Chromaticities SONYA6000_PRI =
+Chromaticities(vec2(0.709212f,  0.27432f), vec2(0.219737f, 0.961661f), vec2(0.023252f, -0.305702f), vec2(0.3127f, 0.329f) );
+const Chromaticities REDWG_PRI =
+Chromaticities(vec2(0.780308f, 0.30425299f), vec2(0.12159501f, 1.49399403f), vec2(0.095612f, -0.084589f), vec2(0.3127f, 0.329f) );
+const Chromaticities BLACKMAGICWG_PRI =
+Chromaticities(vec2(0.7177215143781699f, 0.3171180860551045f), vec2(0.2280409960285721f, 0.8615690087709122f), vec2(0.10058410063338172f, -0.08204520062464217f), vec2(0.3127f, 0.329f) );
+const Chromaticities CANONCINEMA_PRI =
+Chromaticities(vec2(0.7400000016535166f, 0.27000000186020623f), vec2(0.17000000222850284f, 1.1400000018352379f), vec2(0.07999999816658841f, -0.09999999770823552f), vec2(0.3127f, 0.329f) );
 
 //vec3 sqrtf3(vec3 a) {
   //// For each component of vec3 a, compute the square-root
@@ -193,7 +260,7 @@ Chromaticities Insetcalc(Chromaticities N,float cpr,float cpg,float cpb){
     1.0 / pow(1.0 - cpb, 2.0)
   );
 
-  Chromaticities adj = make_chromaticities(
+  Chromaticities adj = Chromaticities(
     vec2(
       (N.red.x - N.white.x) * scale.x + N.white.x,
       (N.red.y-N.white.y) * scale.x + N.white.y
@@ -215,7 +282,7 @@ Chromaticities Insetcalc(Chromaticities N,float cpr,float cpg,float cpb){
 mat3 Insetcalcmatrix(Chromaticities N,float cpr,float cpg,float cpb){
   vec3 scale = vec3(1./pow(1.-cpr,2.),1./pow(1.-cpg,2.),1./pow(1.-cpb,2.));
 
-  Chromaticities adj = make_chromaticities(vec2((N.red.x-N.white.x)*scale.x+N.white.x,(N.red.y-N.white.y)*scale.x+N.white.y),
+  Chromaticities adj = Chromaticities(vec2((N.red.x-N.white.x)*scale.x+N.white.x,(N.red.y-N.white.y)*scale.x+N.white.y),
       vec2((N.green.x-N.white.x)*scale.y+N.white.x,(N.green.y-N.white.y)*scale.y+N.white.y),
       vec2((N.blue.x-N.white.x)*scale.z+N.white.x,(N.blue.y-N.white.y)*scale.z+N.white.y),vec2(N.white.x,N.white.y));
 
@@ -237,7 +304,7 @@ Chromaticities RotatePrimaries(Chromaticities N,float ored,float og,float ob)
   vec2 Cblue = vec2(N.blue.x-N.white.x,N.blue.y-N.white.y);
   vec3 l = vec3(length(vec2(Cred.x,Cred.y)), length(vec2(Cgreen.x,Cgreen.y)), length(vec2(Cblue.x,Cblue.y))); // I think _hypotf is equivalent to length
   vec3 hue = vec3( atan(Cred.y,Cred.x), atan(Cgreen.y,Cgreen.x), atan(Cblue.y,Cblue.x));
-  Chromaticities Nout = make_chromaticities(vec2(l.x*cos(hue.x+ored),l.x*sin(hue.x+ored)),vec2(l.x*cos(hue.y+og),l.x*sin(hue.y+og)),vec2(l.x*cos(hue.z+ob),l.x*sin(hue.z+ob)),N.white);
+  Chromaticities Nout = Chromaticities(vec2(l.x*cos(hue.x+ored),l.x*sin(hue.x+ored)),vec2(l.x*cos(hue.y+og),l.x*sin(hue.y+og)),vec2(l.x*cos(hue.z+ob),l.x*sin(hue.z+ob)),N.white);
   Nout.red.x= Nout.red.x+N.white.x;
   Nout.red.y=Nout.red.y+N.white.y;
   Nout.green.x=Nout.green.x+N.white.x;
@@ -253,7 +320,7 @@ Chromaticities Primaries2Moment(Chromaticities N){
   vec2 momg = vec2((N.green.x-N.white.x)/N.green.y,(N.green.y-N.white.y)/N.green.y);
   vec2 momb = vec2((N.blue.x-N.white.x)/N.blue.y,(N.blue.y-N.white.y)/N.blue.y);
 
-  Chromaticities M = make_chromaticities(momr,momg,momb,N.white);
+  Chromaticities M = Chromaticities(momr,momg,momb,N.white);
 
   return M;
 }
@@ -371,11 +438,12 @@ vec2 intersection(vec2 a,vec2 b){
 
 Chromaticities InsetPrimaries(Chromaticities N,float cpr,float cpg,float cpb,float ored,float og,float ob){
   Chromaticities M = N;
-  N = ScalePrim(N, 2.0, 2.0, 2.0);
+  float arbitrary_scale = 2.0; // This scale can be removed entirely when using EaryChow's version, presumably because the inset and outset matrices negate each other
+  N = ScalePrim(N, arbitrary_scale, arbitrary_scale, arbitrary_scale);
 
   N = RotatePrimary(N,ored,og,ob);
 
-  M= Polygon(M);
+  M = Polygon(M);
 
   vec2 redline = ored>0.? M.red:M.green;
   vec2 greenline = og>0.? M.blue:M.red;
@@ -408,7 +476,7 @@ Chromaticities MomentBoundary(Chromaticities N){
   float g2bslope = (momb.y-momg.y)/(momb.x-momg.x);
   float g2bint = (momb.y-g2bslope*momb.x);
 
-  Chromaticities M = make_chromaticities(vec2(r2gslope,r2gint),vec2(r2bslope,r2bint),vec2(g2bslope,g2bint),N.white);
+  Chromaticities M = Chromaticities(vec2(r2gslope,r2gint),vec2(r2bslope,r2bint),vec2(g2bslope,g2bint),N.white);
 
   return M;
 }
@@ -419,6 +487,7 @@ mat3 RGBtoRGB(Chromaticities N,Chromaticities M){
 
   mat3 rgbtorgb = In2XYZ * XYZ2Out;
 
+  rgbtorgb = transpose(rgbtorgb);
   return rgbtorgb;
 }
 
