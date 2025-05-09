@@ -438,7 +438,7 @@ vec2 intersection(vec2 a,vec2 b){
 
 Chromaticities InsetPrimaries(Chromaticities N,float cpr,float cpg,float cpb,float ored,float og,float ob){
   Chromaticities M = N;
-  float arbitrary_scale = 2.0; // This scale can be removed entirely when using EaryChow's version, presumably because the inset and outset matrices negate each other
+  float arbitrary_scale = 2.0; // This scale can be removed entirely when using EaryChow's config, I'm not sure when and why this ever comes into play
   N = ScalePrim(N, arbitrary_scale, arbitrary_scale, arbitrary_scale);
 
   N = RotatePrimary(N,ored,og,ob);

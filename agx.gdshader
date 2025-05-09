@@ -5,12 +5,18 @@ render_mode unshaded;
 
 uniform float log2_min = -18.0;
 uniform float log2_max = 18.0;
+uniform bool show_clipping = false;
+uniform bool clip_input_to_white = false;
+
+uniform float uniform_inset_scale = 1.0;
+uniform float uniform_outset_scale = 1.0;
+
 uniform bool use_image = true;
 uniform sampler2D image : source_color, repeat_disable;
 uniform float exposure: hint_range(0.5, 5.0, 0.1) = 1.0;
 uniform int curve: hint_enum("Blender AgX", "Fitted Timothy Lottes", "allenwp-piecewise");
-uniform float white_val: hint_range(2.0, 40.0, 0.1) = 16.2917402385381;
-uniform float max_out: hint_range(1.0, 20.0, 0.1) = 1.0;
+uniform float white_val: hint_range(1.0, 40.0, 0.1) = 16.2917402385381;
+uniform float max_out: hint_range(1.0, 10.0, 0.1) = 1.0;
 uniform float lottes_contrast: hint_range(0.5, 3.0, 0.01) = 1.36989969378897;
 uniform float lottes_shoulder: hint_range(0.6, 1.0, 0.01) = 0.903916850555009;
 uniform float contrast: hint_range(1.0, 2.0, 0.01) = 1.25652780401491;
@@ -21,12 +27,12 @@ const mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(
 		vec3(0.62751148770907403411, 0.069107555861366290094, 0.016396571916060692158),
 		vec3(0.32927727964735428428, 0.91950325371517433606, 0.088024234821922748922),
 		vec3(0.04330296975639152724, 0.011359406931309376229, 0.89551332165316518758));
-		
+
 const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
 		vec3(1.6602062978811019111, -0.12455265278490989962, -0.018154995139836493422),
 		vec3(-0.58755383980194848639, 1.1329456581856140455, -0.10060465175595819539),
 		vec3(-0.07282705725221054784, -0.008348386143453457498, 1.1188320152896576747));
-		
+
 vec3 exponential(vec3 x_in, float power) {
 	return x_in / pow(1.0 + pow(x_in, vec3(power)), vec3(1.0 / power));
 }
@@ -85,7 +91,7 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	const float midOut = 0.18;
     float maxVal = max(max_out, 1.0);
     float white = max(white_val, maxVal);
-			
+
 	const mat3 agx_inset_matrix = mat3(
 			vec3(0.856627153315983, 0.137318972929847, 0.11189821299995),
 			vec3(0.0951212405381588, 0.761241990602591, 0.0767994186031903),
@@ -94,20 +100,24 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 			//vec3(0.856627156288779, 0.137318972283552, 0.11189820804518),
 			//vec3(0.0951212454025349, 0.761241987009081, 0.0767994145625176),
 			//vec3(0.0482515983086858, 0.101439040707367, 0.811302377392303));
-			
-	const mat3 agx_outset_matrix = mat3(
+
+	const mat3 agx_outset_matrix = inverse(mat3(
 			vec3(0.89979695591161, 0.11142098895748, 0.11142098895748),
 			vec3(0.0871996192028351, 0.875575586156966, 0.0871996192028349),
-			vec3(0.0130034248855548, 0.0130034248855548, 0.801379391839685));
+			vec3(0.0130034248855548, 0.0130034248855548, 0.801379391839685)));
 	//const mat3 agx_outset_matrix_new = mat3(
 			//vec3(0.899796963837832, 0.11142098366896, 0.11142098366896),
 			//vec3(0.0871996171023204, 0.875575597271192, 0.0871996171023203),
 			//vec3(0.0130034190598471, 0.0130034190598472, 0.801379399228719));
-			
-	Chromaticities working = InsetPrimaries(REC2020_PRI, 0.32965205, 0.28051336, 0.12475368, 2.13976149, -1.22827335, -3.05174246);
-	Chromaticities destination = InsetPrimaries(REC2020_PRI, 0.32317438, 0.28325605, 0.0374326, 0.,0.,0.);
+
+	// Original:
+	//Chromaticities working = InsetPrimaries(REC2020_PRI, 0.32965205, 0.28051336, 0.12475368, 2.13976149, -1.22827335, -3.05174246);
+	//Chromaticities destination = InsetPrimaries(REC2020_PRI, 0.32317438, 0.28325605, 0.0374326, 0.,0.,0.);
+
+	Chromaticities working = InsetPrimaries(REC2020_PRI, uniform_inset_scale * 0.32965205, uniform_inset_scale * 0.28051336, uniform_inset_scale * 0.12475368, 2.13976149, -1.22827335, -3.05174246);
+	Chromaticities destination = InsetPrimaries(REC2020_PRI, uniform_outset_scale * 0.32317438, uniform_outset_scale * 0.28325605, uniform_outset_scale * 0.0374326, 0.,0.,0.);
 	mat3 agx_inset_matrix_generated = RGBtoRGB(working, REC2020_PRI);
-	mat3 agx_outset_matrix_generated = RGBtoRGB(destination, REC2020_PRI); // EaryChow's configuration reverses source and destination
+	mat3 agx_outset_matrix_generated = RGBtoRGB(REC2020_PRI, destination);
 
 	const float midgrey = 0.18;
 	const float normalized_log2_minimum = -10.0;
@@ -131,8 +141,8 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	else {
 		color = agx_inset_matrix * color;
 	}
-	
-	
+
+
 	// Apply Log2 curve to prepare for sigmoid.
 	vec3 blender = log_encoding_Log2(color, midgrey, normalized_log2_minimum, normalized_log2_maximum);
 	// Apply sigmoid function.
@@ -145,7 +155,7 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	// using the Mathematica notebook in the source AgX-GLSL-Shaders repository.
 	float a = lottes_contrast;
 	float d = lottes_shoulder;
-	
+
 	float b = (maxVal * pow(midIn, a) - midOut * pow(white, a)) / (maxVal * midOut * (pow(pow(midIn, a), d) - pow(pow(white, a), d)));
 	float c = (pow(pow(midIn, a), d) * midOut * pow(white, a) - maxVal * pow(midIn, a) * pow(pow(white, a), d)) / (maxVal * midOut * (pow(pow(midIn, a), d) - pow(pow(white, a), d)));
 	vec3 z = pow(color, vec3(a));
@@ -173,21 +183,22 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
         // Original modified Reinhard function in [0,1]: x = (x * (D + x / (C)) / (D + x)); // Solve for C such that white outputs 1.0
         s = slope * s * (shoulder + s / (c * slope)) / (shoulder + (s * slope) / shoulderMaxVal);
         s += midOut;
-		
+
         // Toe
         vec3 t = pow(color, vec3(contrast));
         t = t / (t + vec3(toe_a));
-		
+
 		color = mix(s, t, lessThan(color, vec3(0.18)));
+		color = min(vec3(maxVal), color); // Needed to address cyan colour that is introduced at brighter inputs
 	}
 
 	// Apply outset to make the result more chroma-laden and then go back to linear sRGB.
-	
+
 	if (new_matrices) {
-		color = inverse(agx_outset_matrix_generated) * color;
+		color = agx_outset_matrix_generated * color;
 	}
 	else {
-		color = inverse(agx_outset_matrix) * color;
+		color = agx_outset_matrix * color;
 	}
 	color = LINEAR_REC2020_TO_LINEAR_SRGB * color;
 
@@ -195,15 +206,17 @@ vec3 tonemap_agx(vec3 color, float normalized_log2_maximum) {
 	// simply return the color, even if it has negative components. These negative
 	// components may be useful for subsequent color adjustments.
 	return color;
-	return color / maxVal;
 }
 
 void fragment() {
 	vec3 color;
+	float top_bar = 0.02;
 	if (use_image) {
 		color = texture(image, UV).rgb;
 	} else {
-		float top_bar = 0.01;
+		float log2_value = UV.x * (log2_max - log2_min) - abs(log2_min);
+		float scale = pow(2.0, log2_value);
+
 		if (UV.y >= top_bar)
 		{
 			float padding = 0.005;
@@ -247,22 +260,34 @@ void fragment() {
 				col.g = 0.0;
 				col.b = (y - segments * 6.0) / -segments;
 			}
-			
-			float log2_value = UV.x * (log2_max - log2_min) - abs(log2_min);
-			float scale = pow(2.0, log2_value);
 
 			color = col * scale;
 		}
 		else
 		{
-			float log2_value = UV.x * (log2_max - log2_min) - abs(log2_min);
-			float scale = pow(2.0, log2_value);
-
 			color = vec3(1.0) * scale;
+			if (scale > white_val && UV.y <= top_bar / 2.0) {
+				color = vec3(0);
+			}
+		}
+
+	}
+
+	if (clip_input_to_white) {
+		color = min(vec3(white_val), color);
+	}
+
+	color = tonemap_agx(color, 6.5);
+
+	if (!use_image && UV.y > top_bar / 2.0 && UV.y < top_bar) {
+		if (color.r > 1.0) {
+			color = vec3(0);
 		}
 	}
-	
-	color = tonemap_agx(color, 6.5);
-	
+
+	if (show_clipping && (color.r > 1.0 || color.g > 1.0 || color.b > 1.0)) {
+		color = vec3(1, 0, 1);
+	}
+
 	ALBEDO = color;
 }

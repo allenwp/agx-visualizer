@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://qicb7cnisedx"]
 
 [ext_resource type="Shader" uid="uid://iljkvqy5hyt3" path="res://agx.gdshader" id="1_ig7tw"]
-[ext_resource type="Texture2D" uid="uid://1lfd2vktdxqo" path="res://exr/alexa_BT_709.exr" id="2_0xm2m"]
+[ext_resource type="Texture2D" uid="uid://dd0f2mvevhpov" path="res://exr/blue_bar_709.exr" id="2_0xm2m"]
 
 [sub_resource type="Environment" id="Environment_ig7tw"]
 tonemap_white = 16.0
@@ -12,19 +12,23 @@ size = Vector2(16, 9)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ig7tw"]
 render_priority = 0
 shader = ExtResource("1_ig7tw")
-shader_parameter/log2_min = -6.725
-shader_parameter/log2_max = 7.91
+shader_parameter/log2_min = -7.8
+shader_parameter/log2_max = 20.0
+shader_parameter/show_clipping = false
+shader_parameter/clip_input_to_white = false
+shader_parameter/uniform_inset_scale = 1.0
+shader_parameter/uniform_outset_scale = 1.0
 shader_parameter/use_image = false
 shader_parameter/image = ExtResource("2_0xm2m")
 shader_parameter/exposure = 1.0
-shader_parameter/curve = 2
+shader_parameter/curve = 0
 shader_parameter/white_val = 16.2917
 shader_parameter/max_out = 1.0
 shader_parameter/lottes_contrast = 1.3699
 shader_parameter/lottes_shoulder = 0.903917
 shader_parameter/contrast = 1.25653
 shader_parameter/shoulder = 1.0
-shader_parameter/new_matrices = false
+shader_parameter/new_matrices = true
 
 [node name="Node2D" type="Node3D"]
 
